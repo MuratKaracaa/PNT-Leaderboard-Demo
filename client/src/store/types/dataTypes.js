@@ -1,0 +1,3 @@
+export const GET_PROFILE_DATA = "GET_PROFILE_DATA";
+export const GET_SELF_RANK_DATA = "GET_SELF_RANK_DATA";
+export const REMOVE_DATA = "REMOVE_DATA";
