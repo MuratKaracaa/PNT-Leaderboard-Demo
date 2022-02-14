@@ -11,11 +11,7 @@ export const parameters = {
 };
 
 export const playerHashFields = {
-  name: "name",
-  country: "country",
-  money: "money",
   eRank: "eRank",
-  userName: "userName",
 };
 
 export const prizePoolFields = {

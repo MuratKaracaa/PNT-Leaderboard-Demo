@@ -19,7 +19,7 @@ export const parseIncomingGridData = (data) => {
 
 export const parseIncomingUserData = (data) => {
   data = JSON.parse(data);
-  const [userName, name, country, money] = data;
+  const { userName, name, country, money } = data;
   return [
     {
       userName,

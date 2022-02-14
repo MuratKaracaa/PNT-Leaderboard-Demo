@@ -2,7 +2,7 @@
 
 import axios from "axios";
 
-const baseURL = `${process.env.TARGET_DOMAIN}:${process.env.TARGET_PORT}/api`;
+const baseURL = `${process.env.REACT_APP_TARGET_DOMAIN}:${process.env.REACT_APP_TARGET_PORT}/api`;
 
 const instance = axios.create({
   baseURL,

@@ -4,6 +4,7 @@ import * as socketFunctions from "./socket";
 import seeder from "./seeder";
 import createMockDatabase from "./createMockDatabase";
 import * as cronHelpers from "./cronHelpers";
+import * as mongoHelpers from "./mongo";
 
 export {
   helpers,
@@ -12,4 +13,5 @@ export {
   seeder,
   createMockDatabase,
   cronHelpers,
+  mongoHelpers,
 };

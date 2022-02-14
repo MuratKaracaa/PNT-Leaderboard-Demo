@@ -1,5 +1,4 @@
-import { redisFunctions, helpers } from ".";
-import { redisConstants } from "../constants";
+import { redisFunctions, helpers, mongoHelpers } from ".";
 
 // This method is used to create the data object which will be streamed into the client with every second divisible by 5. A cron expression is used to implement that so that
 // when two seperate windows are opened there will be data consistency.
@@ -12,15 +11,7 @@ export const createDataToStream = async (userToken: string | undefined) => {
     : null;
   const rankingFirstHundred = await redisFunctions.creteaBoardToEmit(0, 99);
   const userProfile = id
-    ? JSON.stringify(
-        await redisFunctions.getPlayerProfile(
-          id,
-          redisConstants.playerHashFields.userName,
-          redisConstants.playerHashFields.name,
-          redisConstants.playerHashFields.country,
-          redisConstants.playerHashFields.money
-        )
-      )
+    ? JSON.stringify(await mongoHelpers.getPlayerProfile(id))
     : null;
   return JSON.stringify({
     rankingBasedOnUser,

@@ -9,11 +9,10 @@ import { redisConstants } from "./constants";
 config();
 
 const { PORT } = process.env;
-createMockDatabase();
+createMockDatabase().then(() => seeder());
 
 server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
 
-seeder();
 io();
 redisFunctions.continuousStreamRead({
   stream: redisConstants.keyNames.moneyStream,

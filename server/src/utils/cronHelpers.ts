@@ -1,6 +1,5 @@
-import { redisFunctions } from ".";
-import { redisConstants } from "../constants";
 import { Player } from "../models";
+import { startSession, ClientSession } from "mongoose";
 
 // Mathematical logic behing the formula:
 // We have a leaderboard with a length that is an even number. And the fixed percentages for the top players is an odd amount,
@@ -34,6 +33,9 @@ const calculatePercentageBasedOnRank = (
 // the remaining players. the remainingPercentage, halfOfRemainingBoard and avgPercentage variables are same-named to avoid confusion when they are used in the
 // calculatePercentageBasedOnRank function.
 
+// To use transaction a session is initialized, and in each query, as the session option the initialized session is passed. In a case of fail, the transaction starts again
+// and no writes happen. To ensure all queries are successfull the Promise.all is used. After that the writes are committed and the session ends.
+
 export const calculatePrizeBasedOnRanksAndDistribute = async (
   board: string[],
   poolMoney: number
@@ -41,54 +43,65 @@ export const calculatePrizeBasedOnRanksAndDistribute = async (
   const remainingPercentage = 55;
   const halfOfRemainingBoard = Math.ceil((board.length - 3) / 2);
   const avgPercentage = remainingPercentage / (board.length - 3);
-  for (let i = 0; i < board.length; i++) {
-    const rank = i + 1;
-    switch (rank) {
-      case 1:
-        await redisFunctions.incrementScoreInPlayerProfile(
-          board[i],
-          poolMoney * 0.2
-        );
-        break;
-      case 2:
-        await redisFunctions.incrementScoreInPlayerProfile(
-          board[i],
-          poolMoney * 0.15
-        );
-        break;
-      case 3:
-        await redisFunctions.incrementScoreInPlayerProfile(
-          board[i],
-          poolMoney * 0.1
-        );
-        break;
-      default:
-        await redisFunctions.incrementScoreInPlayerProfile(
-          board[i],
-          poolMoney *
-            calculatePercentageBasedOnRank(
-              halfOfRemainingBoard,
-              avgPercentage,
-              rank - 3
-            )
-        );
-    }
-  }
-};
+  const session: ClientSession = await startSession();
 
-// A method that will run at the same time as leaderboard reset. As long as the server runs, the incoming money data is stored in the leaderboard as well as the player hash.
-// The player hash is persistent for all time data access for performance reasons. But it's safe to periodically back that data up.
-// The back up runs every predetermined minutes, slicing a predetermined part of db each time. Backup process for the whole database at a single time may put some heavy load on the
-// server, and the back up does not have to happen immediately.
-
-export const backUpMoneyOnDatabase = async () => {
-  const players = await Player.find();
-
-  for await (const player of players) {
-    const [money] = await redisFunctions.getPlayerProfile(
-      player._id,
-      redisConstants.playerHashFields.money
-    );
-    money && (await player.update({ money: Math.round(+money) }));
+  try {
+    await session.withTransaction(async () => {
+      const queries = [];
+      for (let i = 0; i < board.length; i++) {
+        const rank = i + 1;
+        let money;
+        let query;
+        switch (rank) {
+          case 1:
+            money = poolMoney * 0.2;
+            query = Player.findByIdAndUpdate(
+              board[i],
+              { $inc: { money } },
+              { session }
+            );
+            queries.push(query);
+            break;
+          case 2:
+            money = poolMoney * 0.15;
+            query = Player.findByIdAndUpdate(
+              board[i],
+              { $inc: { money } },
+              { session }
+            );
+            queries.push(query);
+            break;
+          case 3:
+            money = poolMoney * 0.1;
+            query = Player.findByIdAndUpdate(
+              board[i],
+              { $inc: { money } },
+              { session }
+            );
+            queries.push(query);
+            break;
+          default:
+            money =
+              poolMoney *
+              calculatePercentageBasedOnRank(
+                halfOfRemainingBoard,
+                avgPercentage,
+                rank - 3
+              );
+            query = Player.findByIdAndUpdate(
+              board[i],
+              { $inc: { money } },
+              { session }
+            );
+            queries.push(query);
+        }
+      }
+      await Promise.all(queries);
+      await session.commitTransaction();
+    });
+  } catch (error) {
+    console.log(error);
+  } finally {
+    await session.endSession();
   }
 };
